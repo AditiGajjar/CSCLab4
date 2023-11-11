@@ -6,17 +6,16 @@ from collections import defaultdict
 def euclidean_distance(point, centroid):
     return np.sqrt(np.sum((point - centroid) ** 2))
 
-def initialize_centroids_plusplus(points, k):
+def centroids_plusplus(points, k):
     centroids = [points.sample(n=1).values.flatten().tolist()]
     for i in range(1, k):
-        distances = points.apply(lambda x: min([np.sqrt(np.sum((x - centroid)**2)) for centroid in centroids]), axis=1)
-        # Choose the next centroid, picking a data point with probability proportional to its squared distance from the nearest existing centroid.
+        distances = points.apply(lambda x: min([euclidean_distance(x, centroid) for centroid in centroids]), axis=1)
         next_centroid = points.sample(weights=distances, n=1).values.flatten().tolist()
         centroids.append(next_centroid)
     return np.array(centroids)
 
 
-def assign_points_to_clusters(points, centroids):
+def clusterize(points, centroids):
     clusters = defaultdict(list)
     for index, point in points.iterrows():
         closest_centroid = np.argmin([euclidean_distance(point, centroid) for centroid in centroids])
@@ -52,10 +51,10 @@ def remove_outliers(clusters, centroid_distances, threshold):
     return new_clusters, outliers
 
 def kmeans(points, k, method='random', threshold=0.001):
-    centroids = initialize_centroids_plusplus(points, k)
+    centroids = centroids_plusplus(points, k)
     while True:
         old_centroids = centroids
-        clusters = assign_points_to_clusters(points, centroids)
+        clusters = clusterize(points, centroids)
         centroids = compute_new_centroids(points, clusters)
         if convergence(old_centroids, centroids, threshold):
             break
@@ -70,12 +69,17 @@ def calculate_cluster_stats(points, cluster, centroid):
     return len(cluster), max_distance, min_distance, avg_distance, sse
 
 
+def normalize_dataframe(df):
+    normalized_df = (df - df.min()) / (df.max() - df.min())
+    return normalized_df
+
 def main(filename, k):
     with open(filename, 'r') as file:
         first_line = file.readline().strip().split(',')
     use_columns = [i for i, flag in enumerate(first_line) if flag == '1']
 
-    df = pd.read_csv(filename, skiprows=1, usecols=use_columns)
+    df0 = pd.read_csv(filename, skiprows=1, usecols=use_columns)
+    df = normalize_dataframe(df0)
 
     points = df
 
@@ -93,8 +97,6 @@ def main(filename, k):
         print(f"Average distance to centroid: {avg_dist}")
         print(f"Sum of Squared Errors: {sse}")
         print()
-
-
 
 if __name__ == "__main__":
     import sys

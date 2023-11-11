@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
-from kmeans import calculate_cluster_stats
+from kmeans import calculate_cluster_stats, normalize_dataframe
 
 def euclidean_distance(point1, point2):
     return np.sqrt(np.sum((point1 - point2) ** 2))
@@ -43,17 +43,18 @@ def agglomerative_clustering(data, distance_matrix):
         for k in range(len(distance_matrix)):
             if k not in [i, j]:
                 new_distances[k] = min(distance_matrix[k, i], distance_matrix[k, j])
-        new_distances[-1] = 0  # Distance of the new cluster to itself
+        new_distances[-1] = 0
 
-        # Expand the distance matrix and set the new distances
+        # Expand  distance matrix
+        # Set the new distances
         distance_matrix = np.vstack((distance_matrix, new_distances[:-1]))
         new_distances_column = np.append(new_distances[:-1], [0])
         distance_matrix = np.column_stack((distance_matrix, new_distances_column))
 
-        # Remove the merged clusters from the distance matrix and clusters list
+        # Remove  merged clusters from the distance matrix and clusters list
         distance_matrix = np.delete(distance_matrix, [i, j], axis=0)
         distance_matrix = np.delete(distance_matrix, [i, j], axis=1)
-        del clusters[max(i, j)]  # Order of deletion matters
+        del clusters[max(i, j)]
         del clusters[min(i, j)]
 
     return dendrogram[-1] if dendrogram else None  
@@ -81,7 +82,8 @@ def main(filename, threshold=None):
     with open(filename, 'r') as file:
         first_line = file.readline().strip().split(',')
     use_columns = [i for i, flag in enumerate(first_line) if flag == '1']
-    data = pd.read_csv(filename, skiprows=1, usecols=use_columns)
+    data0 = pd.read_csv(filename, skiprows=1, usecols=use_columns)
+    data = normalize_dataframe(data0)
     distance_matrix = compute_distance_matrix(data)
 
     root_dendrogram = agglomerative_clustering(data, distance_matrix)
