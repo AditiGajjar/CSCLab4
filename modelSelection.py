@@ -1,35 +1,12 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from kmeans import euclidean_distance, kmeans, calculate_cluster_stats
+from kmeans import kmeans, calculate_cluster_stats, normalize_dataframe
 from hclustering import agglomerative_clustering, compute_distance_matrix, cut_dendrogram_at_threshold
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler
+from collections import defaultdict
 
 
-
-
-# HCLUSTERING
-
-def hypertune_threshold(data, max_height, step):
-    heights = range(0, max_height, step)
-    dbi_scores = []
-
-    # Perform hierarchical clustering
-    distance_matrix = compute_distance_matrix(data)
-    dendrogram_data = agglomerative_clustering(data, distance_matrix)
-
-    for height in heights:
-        clusters = cut_dendrogram_at_threshold(dendrogram_data, height)
-        dbi_score = calculate_davies_bouldin_index(clusters)
-        dbi_scores.append(dbi_score)
-
-    # Plotting DBI scores
-    plt.plot(heights, dbi_scores, 'bx-')
-    plt.xlabel('Height Threshold')
-    plt.ylabel('Davies-Bouldin Index')
-    plt.title('Hypertuning Threshold in Hierarchical Clustering')
-    plt.show()
 
 # Computing accuracy
 def calculate_total_sse(points, clusters, centroids):
@@ -61,8 +38,49 @@ def tune_k(df, max_k):
     return sse_values
 
 
+
+def tune_height(data, max_threshold):
+    sse_values = []
+    threshold_values = np.arange(0, max_threshold, 0.01)
+
+    distance_matrix = compute_distance_matrix(data)
+    root_dendrogram = agglomerative_clustering(data, distance_matrix)
+
+    for threshold in threshold_values:
+        clusters = cut_dendrogram_at_threshold(root_dendrogram, threshold)
+        
+        # Create a temporary dictionary for clusters
+        cluster_dict = {}
+        centroids = []
+
+        for i, cluster in enumerate(clusters):
+            if not cluster:
+                continue
+
+
+            cluster_indices = [data[(data == point).all(axis=1)].index[0] for point in cluster]
+            cluster_dict[i] = cluster_indices
+
+            centroid = np.mean(np.array(cluster), axis=0)
+            centroids.append(centroid)
+
+        sse = calculate_total_sse(data, cluster_dict, centroids)
+        sse_values.append(sse)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(threshold_values, sse_values)
+    plt.xlabel('Threshold')
+    plt.ylabel('Sum of Squared Errors (SSE)')
+    plt.title('SSE vs. Threshold')
+    plt.show()
+
+    return threshold_values, sse_values
+
+
+
+
 # Plotting low dimension data
-def plot_data_for_cluster_analysis(data):
+def plot_data(data):
     if data.shape[1] == 2:
         # 2D plot for datasets with two features
         sns.scatterplot(x=data.iloc[:, 0], y=data.iloc[:, 1])
@@ -88,9 +106,10 @@ def main(filename, model_type,k = None, threshold = None):
     with open(filename, 'r') as file:
         first_line = file.readline().strip().split(',')
     use_columns = [i for i, flag in enumerate(first_line) if flag == '1']
-    data = pd.read_csv(filename, skiprows=1, usecols=use_columns)
+    data0 = pd.read_csv(filename, skiprows=1, usecols=use_columns)
+    data = normalize_dataframe(data0)
 
-    plot_data_for_cluster_analysis(data)
+    plot_data(data)
 
     # Run the appropriate model
     if model_type.lower() == 'kmeans':
@@ -102,7 +121,28 @@ def main(filename, model_type,k = None, threshold = None):
         print()
 
     elif model_type.lower() == 'hclustering':
-        hypertune_threshold(data, threshold, 0.5)
+        tune_height(data, threshold)
+        thresh = float(input("Best threshold: "))
+        print(model_type, ":")
+        distance_matrix = compute_distance_matrix(data)
+        root_dendrogram = agglomerative_clustering(data, distance_matrix)
+        raw_clusters = cut_dendrogram_at_threshold(root_dendrogram, thresh)
+        print("Number of clusters at this threshold:", len(raw_clusters))
+        clusters = defaultdict(list)
+        centroids = []
+
+        for i, cluster in enumerate(raw_clusters):
+            cluster_indices = [data[(data == point).all(axis=1)].index[0] for point in cluster]
+            clusters[i] = cluster_indices
+            centroid = np.mean(np.array(cluster), axis=0)
+            centroids.append(centroid)
+
+        print(calculate_total_sse(data, clusters, centroids))
+        print()
+    
+    # DBSCAN
+    else:
+        pass
 
 if __name__ == "__main__":
     import sys
@@ -119,6 +159,6 @@ if __name__ == "__main__":
     if model_type.lower() == 'kmeans':
         k = int(sys.argv[3])
     elif model_type.lower() == 'hclustering':
-        threshold = int(sys.argv[3])
+        threshold = float(sys.argv[3])
 
     main(filename, model_type, k, threshold)
