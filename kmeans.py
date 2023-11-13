@@ -89,7 +89,7 @@ def main(filename, k):
     clusters, outliers = remove_outliers(clusters, centroid_distances, threshold)
     for i, cluster in enumerate(clusters.values()):
         cluster_size, max_dist, min_dist, avg_dist, sse = calculate_cluster_stats(df, cluster, centroids[i])
-        print(f"Cluster {i}:")
+        print(f"Cluster {i+1}:")
         print(f"Number of points: {cluster_size}")
         print(f"Centroid coordinates: {centroids[i][0]}, {centroids[i][1]}")
         print(f"Maximum distance to centroid: {max_dist}")

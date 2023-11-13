@@ -76,6 +76,33 @@ def tune_height(data, max_threshold):
 
     return threshold_values, sse_values
 
+def plot_clusters(data, clusters, centroids):
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']  # Extend this list if more colors are needed
+    if data.shape[1] == 2:
+        for i, cluster in clusters.items():
+            cluster_points = data.iloc[cluster]
+            plt.scatter(cluster_points.iloc[:, 0], cluster_points.iloc[:, 1], color=colors[i % len(colors)], label=f'Cluster {i}')
+        plt.scatter(centroids[:, 0], centroids[:, 1], color='gold', marker='*', s=200, label='Centroids')
+        plt.xlabel(data.columns[0])
+        plt.ylabel(data.columns[1])
+        plt.title("2D Scatter Plot of Clusters")
+        plt.legend()
+    elif data.shape[1] == 3:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for i, cluster in clusters.items():
+            cluster_points = data.iloc[cluster]
+            ax.scatter(cluster_points.iloc[:, 0], cluster_points.iloc[:, 1], cluster_points.iloc[:, 2], color=colors[i % len(colors)], label=f'Cluster {i}')
+        ax.scatter(centroids[:, 0], centroids[:, 1], centroids[:, 2], color='gold', marker='*', s=200, label='Centroids')
+        ax.set_xlabel(data.columns[0])
+        ax.set_ylabel(data.columns[1])
+        ax.set_zlabel(data.columns[2])
+        plt.title("3D Scatter Plot of Clusters")
+        plt.legend()
+    else:
+        print("Data has more than three features, cannot plot.")
+    plt.show()
+
 
 
 
@@ -117,6 +144,7 @@ def main(filename, model_type,k = None, threshold = None):
         k = int(input("Best k: "))
         print(model_type, ":")
         clusters, centroids = kmeans(data, k)
+        plot_clusters(data, clusters, centroids)  # Plotting the clusters
         print(calculate_total_sse(data, clusters, centroids))
         print()
 
