@@ -21,7 +21,7 @@ def compute_distance_matrix(data):
 
 # find core points
 def dbscan(data, epsilon, min_pts):
-    #n = data.shape[0]
+
     distances = compute_distance_matrix(data)
     n = distances.shape[0]
     # dictionary of core points
@@ -30,7 +30,6 @@ def dbscan(data, epsilon, min_pts):
     cluster_assignment = [0] * data.shape[0] 
 
     for i in range(n):
-       # neighbors = find_neighbors(data, data.iloc[i], epsilon)
         neighbors = []
         for j in range(n):
             if i != j and distances[i][j] <= epsilon:
@@ -40,22 +39,11 @@ def dbscan(data, epsilon, min_pts):
         if len(neighbors) >= min_pts:
             core_points[i] = neighbors
             #added the core point as the key and set neighbors as the values
-        #print(f'Core Points: {core_points}')
 
     # initialize current cluster label
     current_cluster = 0 
     # list of keys
     core_points_keys = list(core_points.keys())
-
-    cluster_stats = {}
-    
-# other way 
-    # for d in core_points:
-    #     if cluster_assignment[d] == -1:
-    #         current_cluster += 1 # start a new cluster
-    #         cluster_assignment[d] = current_cluster
-    #         #finding all density connected points
-    #         density_connected(data, d, core_points, current_cluster,epsilon, min_pts, distances, cluster_assignment)
 
     for d in core_points:
         if cluster_assignment[d] == 0:
@@ -63,17 +51,6 @@ def dbscan(data, epsilon, min_pts):
             cluster_assignment[d] = current_cluster
             #finding all density connected points
             cluster_assignment = density_connected(d, core_points_keys, core_points, current_cluster, cluster_assignment)
-
-            # calculate cluster statistics
-            # cluster_points = [i for i, label in enumerate(cluster_assignment) if label == current_cluster]
-            # cluster_data = data.iloc[cluster_points]
-            # cluster_stats[current_cluster] = {
-            #     "Number of Points": len(cluster_points),
-            #     "Centroid": cluster_data.mean(),  # Assuming you have numeric features
-            #     "Max Dist. to Center": distances[cluster_points].max(),
-            #     "Min Dist. to Center": distances[cluster_points].min(),
-            #     "Avg Dist. to Center": distances[cluster_points].mean()
-            # }
         
     clusters = {}
     for k in range(1,current_cluster+1): 
@@ -93,17 +70,11 @@ def density_connected(point, core_points_keys, core_points, cluster_id, cluster_
 
     for d in core_points[point]:
         cluster_assignment[d] = cluster_id
-        #if cluster_assignment[d] == -1:
+        #if cluster_assignment[d] == 0:
         if d in core_points_keys:
             core_points_keys.remove(d)
             cluster_assignment = density_connected(d, core_points_keys, core_points, cluster_id, cluster_assignment)
     return cluster_assignment
-
-# def density_connected(data, point, core_points, cluster_id, epsilon, min_samples, distances, cluster_assignment):
-#     for d in core_points:
-#         if cluster_assignment[d] == 0 and distances[point, d] <= epsilon:
-#             #cluster_assignment[d] = cluster_id
-#             density_connected(data, d, core_points, cluster_id, epsilon, min_samples, distances, cluster_assignment)
 
 def normalize_dataframe(df):
     normalized_df = (df - df.min()) / (df.max() - df.min())
@@ -142,34 +113,6 @@ def main(filename, epsilon, min_pts):
     print()
     print("Noise Points (outliers):", noise)
     print("Percentage of Noise:", len(noise) / data.shape[0] * 100, "%")
-    #Dictionary to store cluster statistics
-#    cluster_stats = {}
-#wrong 
-    # for cluster_id, cluster_points in clusters.items():
-    #     cluster_data = data.iloc[cluster_points]
-    #     cluster_stats[cluster_id] = {
-    #         "Number of Points": len(cluster_points),
-    #         "Centroid": cluster_data.mean(), 
-    #         "Max Dist. to Center": distance_matrix[cluster_points].max(),
-    #         "Min Dist. to Center": distance_matrix[cluster_points].min(),
-    #         "Avg Dist. to Center": distance_matrix[cluster_points].mean()
-    #     }
-
-    # print("Clusters:", clusters)
-    # for cluster_id, stats in cluster_stats.items():
-    #     print(f"Cluster {cluster_id}:")
-    #     print(f"Number of Points: {stats['Number of Points']}")
-    #     print(f"Centroid: {stats['Centroid']}")
-    #     print(f"Max Dist. to Center: {stats['Max Dist. to Center']}")
-    #     print(f"Min Dist. to Center: {stats['Min Dist. to Center']}")
-    #     print(f"Avg Dist. to Center: {stats['Avg Dist. to Center']}")
-    #     print()
-
-#testing 
-
-# filename = '/Users/anaghasikha/Desktop/CSC_466/lab4_2/CSCLab4/4clusters.csv'
-
-# main(filename, epsilon=0.14, min_pts = 4)
 
 
 if __name__ == "__main__":
@@ -185,6 +128,8 @@ if __name__ == "__main__":
 
     main(filename, epsilon, min_pts)
 
-#eps - big enough to get enough points in each cluster but not too many
-#minpts - increase is more clusters, decrease is less clusters
-# want a high percentage of core points and lower percentage of border points for tightly defined clusters
+# python3 dbscan.py 4clusters.csv 0.14 4
+# python3 dbscan.py mammal_milk.csv 0.15 1
+# python3 dbscan.py planets.csv 0.3 3
+# python3 dbscan.py iris.csv 0.15 2
+# python3 dbscan.py AccidentsSet03.csv 0.4 3
