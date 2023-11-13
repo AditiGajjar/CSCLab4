@@ -124,7 +124,7 @@ def main(filename, epsilon, min_pts):
     for cluster, points in clusters.items():
         center = data.iloc[points].mean(axis=0).to_list()
         distance = [euclidean_distance(data.iloc[x], center) for x in points]
-        cluster_sse = np.sum(np.array(distance)**2)  # Calculate SSE for the current cluster
+        cluster_sse = np.sum(np.array(distance)**2) 
         total_sse += cluster_sse
         print(f"Cluster: {cluster}")
         print(f"Num of Points: {len(points)}")

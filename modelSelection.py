@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 
-# Computing accuracy
+# Total accurcy
 def calculate_total_sse(points, clusters, centroids):
     total_sse = 0
     for i, cluster in clusters.items():
@@ -58,7 +58,6 @@ def tune_height(data, max_threshold):
     for threshold in threshold_values:
         clusters = cut_dendrogram_at_threshold(root_dendrogram, threshold)
         
-        # Create a temporary dictionary for clusters
         cluster_dict = {}
         centroids = []
 
@@ -86,18 +85,43 @@ def tune_height(data, max_threshold):
     return threshold_values, sse_values
 
 
+def plot_kmeans_clusters(data, clusters, centroids):
+    plt.figure(figsize=(10, 6))
+    colors = ['r', 'g', 'b']
 
+    if data.shape[1] == 2:
+        for key in clusters.keys():
+            cluster_data = data.iloc[clusters[key]]
+            plt.scatter(cluster_data.iloc[:, 0], cluster_data.iloc[:, 1], c=colors[key % len(colors)], marker='o')
+        plt.scatter([centroid[0] for centroid in centroids], [centroid[1] for centroid in centroids], c='black', marker='x')
+        plt.xlabel(data.columns[0])
+        plt.ylabel(data.columns[1])
+    elif data.shape[1] == 3:
+        ax = plt.figure().add_subplot(projection='3d')
+        for key in clusters.keys():
+            cluster_data = data.iloc[clusters[key]]
+            ax.scatter(cluster_data.iloc[:, 0], cluster_data.iloc[:, 1], cluster_data.iloc[:, 2], c=colors[key % len(colors)], marker='o')
+        ax.scatter([centroid[0] for centroid in centroids], [centroid[1] for centroid in centroids], [centroid[2] for centroid in centroids], c='black', marker='x')
+        ax.set_xlabel(data.columns[0])
+        ax.set_ylabel(data.columns[1])
+        ax.set_zlabel(data.columns[2])
+    else:
+        print("Data has more than three features, cannot plot.")
+        return
+
+    plt.title("K-Means Clustering")
+    plt.show()
 
 # Plotting low dimension data
 def plot_data(data):
     if data.shape[1] == 2:
-        # 2D plot for datasets with two features
+        # 2D plot
         sns.scatterplot(x=data.iloc[:, 0], y=data.iloc[:, 1])
         plt.xlabel(data.columns[0])
         plt.ylabel(data.columns[1])
         plt.title("2D Scatter Plot of the Data")
     elif data.shape[1] == 3:
-        # 3D plot for datasets with three features
+        # 3D plot
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(data.iloc[:, 0], data.iloc[:, 1], data.iloc[:, 2])
@@ -126,7 +150,7 @@ def main(filename, model_type,k = None, threshold = None, epsilon = None, min_pt
         k = int(input("Best k: "))
         print(model_type, ":")
         clusters, centroids = kmeans(data, k)
-        plot_clusters(data, clusters, centroids)  # Plotting the clusters
+        plot_kmeans_clusters(data, clusters, centroids)
         print(calculate_total_sse(data, clusters, centroids))
         print()
 
@@ -152,15 +176,7 @@ def main(filename, model_type,k = None, threshold = None, epsilon = None, min_pt
     
     # DBSCAN
     elif model_type.lower() == 'dbscan':
-        tune_dbscan_param(data,epsilon,min_pts)
-        # epsilon = float(input("Best epsilon: "))
-        # min_pts = int(input("Best min_pts: "))
-
-        print(model_type, ':')
-        #distance_matrix = compute_distance_matrix(data)
-
-
-    else:
+        # we included dbscan hyperparameter tuning in the dbscan.py file itself
         pass
 
 if __name__ == "__main__":
