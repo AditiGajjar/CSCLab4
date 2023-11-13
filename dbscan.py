@@ -114,12 +114,6 @@ def main(filename, epsilon, min_pts):
     print("Noise Points (outliers):", noise)
     print("Percentage of Noise:", len(noise) / data.shape[0] * 100, "%")
 
-#testing 
-
-# filename = '/Users/anaghasikha/Desktop/CSC_466/lab4_2/CSCLab4/4clusters.csv'
-
-# main(filename, epsilon=0.14, min_pts = 4)
-
 
 if __name__ == "__main__":
     import sys
@@ -136,7 +130,6 @@ if __name__ == "__main__":
 
 # python3 dbscan.py 4clusters.csv 0.14 4
 # python3 dbscan.py mammal_milk.csv 0.15 1
-
-#eps - big enough to get enough points in each cluster but not too many
-#minpts - increase is more clusters, decrease is less clusters
-# want a high percentage of core points and lower percentage of border points for tightly defined clusters
+# python3 dbscan.py planets.csv 0.3 3
+# python3 dbscan.py iris.csv 0.15 2
+# python3 dbscan.py AccidentsSet03.csv 0.4 3
