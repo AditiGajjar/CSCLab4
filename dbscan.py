@@ -19,31 +19,22 @@ def compute_distance_matrix(data):
             distance_matrix[j][i] = distance
     return distance_matrix
 
-#find neighbors
-# def find_neighbors(data, point, epsilon):
-#     neighbors = []
-#     for i, neighbor in enumerate(data):
-#         if euclidean_distance(point, neighbor) <= epsilon:
-#             neighbors.append(i)
-#     return neighbors
-      
-
 # find core points
 def dbscan(data, epsilon, min_pts):
-    n = data.shape[0]
+    #n = data.shape[0]
     distances = compute_distance_matrix(data)
+    n = distances.shape[0]
     # dictionary of core points
     core_points = {}
     # initializing a list of -1 the length of the dataset 
-    cluster_assignment = [-1] * data.shape[0] 
+    cluster_assignment = [0] * data.shape[0] 
 
     for i in range(n):
        # neighbors = find_neighbors(data, data.iloc[i], epsilon)
         neighbors = []
         for j in range(n):
-            if i != j and euclidean_distance(i, j) <= epsilon:
+            if i != j and distances[i][j] <= epsilon:
                 neighbors.append(j)
-        #print(f'Neighbors: {neighbors}')
 
         #checking if the point is a core point 
         if len(neighbors) >= min_pts:
@@ -52,25 +43,46 @@ def dbscan(data, epsilon, min_pts):
         #print(f'Core Points: {core_points}')
 
     # initialize current cluster label
-    current_cluster = -1 
+    current_cluster = 0 
     # list of keys
     core_points_keys = list(core_points.keys())
+
+    cluster_stats = {}
+    
+# other way 
+    # for d in core_points:
+    #     if cluster_assignment[d] == -1:
+    #         current_cluster += 1 # start a new cluster
+    #         cluster_assignment[d] = current_cluster
+    #         #finding all density connected points
+    #         density_connected(data, d, core_points, current_cluster,epsilon, min_pts, distances, cluster_assignment)
+
     for d in core_points:
-        if cluster_assignment[d] == -1:
+        if cluster_assignment[d] == 0:
             current_cluster += 1 # start a new cluster
             cluster_assignment[d] = current_cluster
             #finding all density connected points
             cluster_assignment = density_connected(d, core_points_keys, core_points, current_cluster, cluster_assignment)
-            #cluster_assignme
+
+            # calculate cluster statistics
+            cluster_points = [i for i, label in enumerate(cluster_assignment) if label == current_cluster]
+            cluster_data = data.iloc[cluster_points]
+            cluster_stats[current_cluster] = {
+                "Number of Points": len(cluster_points),
+                "Centroid": cluster_data.mean(),  # Assuming you have numeric features
+                "Max Dist. to Center": distances[cluster_points].max(),
+                "Min Dist. to Center": distances[cluster_points].min(),
+                "Avg Dist. to Center": distances[cluster_points].mean()
+            }
         
     clusters = {}
-    for k in range(current_cluster+1): 
+    for k in range(1,current_cluster+1): 
         clusters[k] = [i for i, label in enumerate(cluster_assignment) if label == k]
     
     #outliers
     noise = [i for i, label in enumerate(cluster_assignment) if label == -1]
     border = [i for i in range(data.shape[0]) if i not in core_points and i not in noise]
-    #outliers = [i for i in range(data.shape[0]) if i not in core_points and cluster_assignment[i] == -1]
+    
     return clusters, core_points, border, noise
 
 
@@ -92,20 +104,11 @@ def density_connected(point, core_points_keys, core_points, cluster_id, cluster_
 #         if cluster_assignment[d] == -1 and distances[point, d] <= epsilon:
 #             #cluster_assignment[d] = cluster_id
 #             density_connected(data, d, core_points, cluster_id, epsilon, min_samples, distances, cluster_assignment)
-# def dbscan(data, epsilon, minpts):
-#     return
-
-# at core points see what points it hits, if non core point then add to cluster but dont continue chain reactions
 
 def normalize_dataframe(df):
     normalized_df = (df - df.min()) / (df.max() - df.min())
     return normalized_df
 
-def min_max_scaling(col):
-    min_val = col.min()
-    max_val = col.max()
-    scaled_column = (col - min_val) / (max_val - min_val)
-    return scaled_column
 
 def main(filename, epsilon, min_pts):
     with open(filename, 'r') as file:
@@ -114,22 +117,56 @@ def main(filename, epsilon, min_pts):
 
     data0 = pd.read_csv(filename, skiprows=1, usecols=use_columns)
     data = normalize_dataframe(data0)
-    distance_matrix = compute_distance_matrix(data)
+    #distance_matrix = compute_distance_matrix(data)
     clusters, core_points, border, noise = dbscan(data, epsilon, min_pts)
-    print(data)
-    print("Clusters:", clusters)
+
+    for cluster, points in clusters.items():
+        center = data.iloc[points].mean(axis=0).to_list()
+        distance = [euclidean_distance(data.iloc[x], center) for x in points]
+        print(f"Cluster: {cluster}")
+        print(f"Center: " )
+        for i in center:
+            print(f"{i} ,")
+        print(f"Max Dist. to Center: {np.max(distance)}")
+        print(f"Min Dist. to Center: {np.min(distance)}")
+        print(f"Avg Dist. to Center: {np.mean(distance)}")
+        print(f"SSE for Cluster: {np.sum(np.array(distance)**2)} \n")
+
+    #Dictionary to store cluster statistics
+#    cluster_stats = {}
+#wrong 
+    # for cluster_id, cluster_points in clusters.items():
+    #     cluster_data = data.iloc[cluster_points]
+    #     cluster_stats[cluster_id] = {
+    #         "Number of Points": len(cluster_points),
+    #         "Centroid": cluster_data.mean(), 
+    #         "Max Dist. to Center": distance_matrix[cluster_points].max(),
+    #         "Min Dist. to Center": distance_matrix[cluster_points].min(),
+    #         "Avg Dist. to Center": distance_matrix[cluster_points].mean()
+    #     }
+
+    # print("Clusters:", clusters)
+    # for cluster_id, stats in cluster_stats.items():
+    #     print(f"Cluster {cluster_id}:")
+    #     print(f"Number of Points: {stats['Number of Points']}")
+    #     print(f"Centroid: {stats['Centroid']}")
+    #     print(f"Max Dist. to Center: {stats['Max Dist. to Center']}")
+    #     print(f"Min Dist. to Center: {stats['Min Dist. to Center']}")
+    #     print(f"Avg Dist. to Center: {stats['Avg Dist. to Center']}")
+    #     print()
     print("Core Points:", core_points)
     print("Percentage of Core Points:", len(core_points) / data.shape[0] * 100, "%")
+    print()
     print("Border Points:", border)
     print("Percentage of Border Points:", len(border) / data.shape[0] * 100, "%")
+    print()
     print("Noise Points (outliers):", noise)
-    #print("Outliers Count:", len(outliers))
     print("Percentage of Noise:", len(noise) / data.shape[0] * 100, "%")
 
 
 #testing 
 
-filename = '/Users/anaghasikha/Desktop/CSC_466/CSCLab4/mammal_milk.csv'
+filename = '/Users/anaghasikha/Desktop/CSC_466/CSCLab4/4clusters.csv'
 # with open(filename, 'r') as file:
 #         first_line = file.readline().strip().split(',')
 # use_columns = [i for i, flag in enumerate(first_line) if flag == '1']
@@ -140,7 +177,7 @@ filename = '/Users/anaghasikha/Desktop/CSC_466/CSCLab4/mammal_milk.csv'
 # for i in range(data.shape[0]):
 #     neighbors = find_neighbors(data, data.iloc[i], epsilon=3)
 #     print(neighbors)
-main(filename, epsilon=3, min_pts = 4)
+main(filename, epsilon=0.1, min_pts = 2)
 #print(compute_distance_matrix(data))
 
 

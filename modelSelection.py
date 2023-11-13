@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from kmeans import kmeans, calculate_cluster_stats, normalize_dataframe
 from hclustering import agglomerative_clustering, compute_distance_matrix, cut_dendrogram_at_threshold
+from dbscan import dbscan, compute_distance_matrix, euclidean_distance, density_connected
 import seaborn as sns
 from collections import defaultdict
 
@@ -16,6 +17,14 @@ def calculate_total_sse(points, clusters, centroids):
         sse = calculate_cluster_stats(points, cluster, centroid)[4]
         total_sse += sse
     return(total_sse)
+
+def calculate_total_sse_dbscan(data, clusters):
+    total_sse = 0
+    for _, cluster in clusters.items():
+        for i in cluster:
+            total_sse += np.linalg.norm(data.iloc[i] - np.mean(data.iloc[cluster], axis=0))**2
+    return total_sse
+
 
 # k-means tuning
 # if we see a high dip (an elbow), we have found the optimal k
@@ -76,6 +85,30 @@ def tune_height(data, max_threshold):
 
     return threshold_values, sse_values
 
+def tune_dbscan_param(data, max_epsilon, max_min_pts):
+    sse_values = []
+    #sse_values = np.zeros((max_epsilon, max_min_pts))
+    epsilon_values = np.linspace(0.1, max_epsilon, max_epsilon)
+    min_pts_values = range(1, max_min_pts + 1)
+
+    for i, epsilon in enumerate(epsilon_values):
+        for j, min_pts in enumerate(min_pts_values):
+            clusters, core_points, border, noise = dbscan(data, epsilon, min_pts)
+            sse = calculate_total_sse_dbscan(data, clusters)
+            sse_values[i, j] = sse
+    
+     # Plot the SSE values for different epsilon and min_pts combinations
+    fig, ax = plt.subplots()
+    cax = ax.matshow(sse_values, cmap='viridis')
+    fig.colorbar(cax)
+    ax.set_xticks(np.arange(len(min_pts_values)))
+    ax.set_yticks(np.arange(len(epsilon_values)))
+    ax.set_xticklabels(min_pts_values)
+    ax.set_yticklabels(epsilon_values)
+    plt.xlabel('Min Points (min_pts)')
+    plt.ylabel('Epsilon (epsilon)')
+    plt.title('SSE vs. Epsilon and Min Points')
+    plt.show()
 
 
 
@@ -102,7 +135,7 @@ def plot_data(data):
 
     plt.show()
 
-def main(filename, model_type,k = None, threshold = None):
+def main(filename, model_type,k = None, threshold = None, epsilon = None, min_pts = None):
     with open(filename, 'r') as file:
         first_line = file.readline().strip().split(',')
     use_columns = [i for i, flag in enumerate(first_line) if flag == '1']
@@ -141,6 +174,12 @@ def main(filename, model_type,k = None, threshold = None):
         print()
     
     # DBSCAN
+    elif model_type.lower() == 'dbscan':
+        tune_dbscan_param(data,epsilon,min_pts)
+        epsilon = float(input("Best epsilon: "))
+        min_pts = int(input("Best min_pts: "))
+
+
     else:
         pass
 
@@ -148,6 +187,8 @@ if __name__ == "__main__":
     import sys
     k = None
     threshold = None
+    epsilon = None
+    min_pts = None
 
     if len(sys.argv) < 2:
         print("Too many inputs!")
@@ -160,5 +201,8 @@ if __name__ == "__main__":
         k = int(sys.argv[3])
     elif model_type.lower() == 'hclustering':
         threshold = float(sys.argv[3])
+    elif model_type.lower() == 'dbscan':
+        epsilon = float(sys.arg[2])
+        min_pts = int(sys.arg[3])
 
     main(filename, model_type, k, threshold)
