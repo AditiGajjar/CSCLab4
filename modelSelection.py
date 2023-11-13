@@ -89,12 +89,14 @@ def tune_dbscan_param(data, max_epsilon, max_min_pts):
     sse_values = []
     #sse_values = np.zeros((max_epsilon, max_min_pts))
     epsilon_values = np.linspace(0.1, max_epsilon, max_epsilon)
+    print(epsilon_values)
     min_pts_values = range(1, max_min_pts + 1)
 
     for i, epsilon in enumerate(epsilon_values):
         for j, min_pts in enumerate(min_pts_values):
             clusters, core_points, border, noise = dbscan(data, epsilon, min_pts)
             sse = calculate_total_sse_dbscan(data, clusters)
+            print(sse)
             sse_values[i, j] = sse
     
      # Plot the SSE values for different epsilon and min_pts combinations
@@ -109,7 +111,7 @@ def tune_dbscan_param(data, max_epsilon, max_min_pts):
     plt.ylabel('Epsilon (epsilon)')
     plt.title('SSE vs. Epsilon and Min Points')
     plt.show()
-
+#print out sse for 0.1-0.
 
 
 # Plotting low dimension data
@@ -176,8 +178,11 @@ def main(filename, model_type,k = None, threshold = None, epsilon = None, min_pt
     # DBSCAN
     elif model_type.lower() == 'dbscan':
         tune_dbscan_param(data,epsilon,min_pts)
-        epsilon = float(input("Best epsilon: "))
-        min_pts = int(input("Best min_pts: "))
+        # epsilon = float(input("Best epsilon: "))
+        # min_pts = int(input("Best min_pts: "))
+
+        print(model_type, ':')
+        #distance_matrix = compute_distance_matrix(data)
 
 
     else:
@@ -202,7 +207,7 @@ if __name__ == "__main__":
     elif model_type.lower() == 'hclustering':
         threshold = float(sys.argv[3])
     elif model_type.lower() == 'dbscan':
-        epsilon = float(sys.arg[2])
-        min_pts = int(sys.arg[3])
+        epsilon = float(sys.argv[3])
+        min_pts = int(sys.argv[4])
 
     main(filename, model_type, k, threshold)

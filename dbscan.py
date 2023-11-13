@@ -65,22 +65,22 @@ def dbscan(data, epsilon, min_pts):
             cluster_assignment = density_connected(d, core_points_keys, core_points, current_cluster, cluster_assignment)
 
             # calculate cluster statistics
-            cluster_points = [i for i, label in enumerate(cluster_assignment) if label == current_cluster]
-            cluster_data = data.iloc[cluster_points]
-            cluster_stats[current_cluster] = {
-                "Number of Points": len(cluster_points),
-                "Centroid": cluster_data.mean(),  # Assuming you have numeric features
-                "Max Dist. to Center": distances[cluster_points].max(),
-                "Min Dist. to Center": distances[cluster_points].min(),
-                "Avg Dist. to Center": distances[cluster_points].mean()
-            }
+            # cluster_points = [i for i, label in enumerate(cluster_assignment) if label == current_cluster]
+            # cluster_data = data.iloc[cluster_points]
+            # cluster_stats[current_cluster] = {
+            #     "Number of Points": len(cluster_points),
+            #     "Centroid": cluster_data.mean(),  # Assuming you have numeric features
+            #     "Max Dist. to Center": distances[cluster_points].max(),
+            #     "Min Dist. to Center": distances[cluster_points].min(),
+            #     "Avg Dist. to Center": distances[cluster_points].mean()
+            # }
         
     clusters = {}
     for k in range(1,current_cluster+1): 
         clusters[k] = [i for i, label in enumerate(cluster_assignment) if label == k]
     
     #outliers
-    noise = [i for i, label in enumerate(cluster_assignment) if label == -1]
+    noise = [i for i, label in enumerate(cluster_assignment) if label == 0]
     border = [i for i in range(data.shape[0]) if i not in core_points and i not in noise]
     
     return clusters, core_points, border, noise
@@ -101,7 +101,7 @@ def density_connected(point, core_points_keys, core_points, cluster_id, cluster_
 
 # def density_connected(data, point, core_points, cluster_id, epsilon, min_samples, distances, cluster_assignment):
 #     for d in core_points:
-#         if cluster_assignment[d] == -1 and distances[point, d] <= epsilon:
+#         if cluster_assignment[d] == 0 and distances[point, d] <= epsilon:
 #             #cluster_assignment[d] = cluster_id
 #             density_connected(data, d, core_points, cluster_id, epsilon, min_samples, distances, cluster_assignment)
 
@@ -117,21 +117,31 @@ def main(filename, epsilon, min_pts):
 
     data0 = pd.read_csv(filename, skiprows=1, usecols=use_columns)
     data = normalize_dataframe(data0)
-    #distance_matrix = compute_distance_matrix(data)
+    distance_matrix = compute_distance_matrix(data)
     clusters, core_points, border, noise = dbscan(data, epsilon, min_pts)
 
+    total_sse = 0
     for cluster, points in clusters.items():
         center = data.iloc[points].mean(axis=0).to_list()
         distance = [euclidean_distance(data.iloc[x], center) for x in points]
+        cluster_sse = np.sum(np.array(distance)**2)  # Calculate SSE for the current cluster
+        total_sse += cluster_sse
         print(f"Cluster: {cluster}")
-        print(f"Center: " )
-        for i in center:
-            print(f"{i} ,")
+        print(f"Num of Points: {len(points)}")
+        print("Center:", ", ".join(str(i) for i in center))
         print(f"Max Dist. to Center: {np.max(distance)}")
         print(f"Min Dist. to Center: {np.min(distance)}")
         print(f"Avg Dist. to Center: {np.mean(distance)}")
-        print(f"SSE for Cluster: {np.sum(np.array(distance)**2)} \n")
-
+        print(f"SSE for Cluster: {cluster_sse} \n")
+    print("Total SSE:", total_sse)
+    print("Core Points:", core_points)
+    print("Percentage of Core Points:", len(core_points) / data.shape[0] * 100, "%")
+    print()
+    print("Border Points:", border)
+    print("Percentage of Border Points:", len(border) / data.shape[0] * 100, "%")
+    print()
+    print("Noise Points (outliers):", noise)
+    print("Percentage of Noise:", len(noise) / data.shape[0] * 100, "%")
     #Dictionary to store cluster statistics
 #    cluster_stats = {}
 #wrong 
@@ -154,51 +164,27 @@ def main(filename, epsilon, min_pts):
     #     print(f"Min Dist. to Center: {stats['Min Dist. to Center']}")
     #     print(f"Avg Dist. to Center: {stats['Avg Dist. to Center']}")
     #     print()
-    print("Core Points:", core_points)
-    print("Percentage of Core Points:", len(core_points) / data.shape[0] * 100, "%")
-    print()
-    print("Border Points:", border)
-    print("Percentage of Border Points:", len(border) / data.shape[0] * 100, "%")
-    print()
-    print("Noise Points (outliers):", noise)
-    print("Percentage of Noise:", len(noise) / data.shape[0] * 100, "%")
-
 
 #testing 
 
-filename = '/Users/anaghasikha/Desktop/CSC_466/CSCLab4/4clusters.csv'
-# with open(filename, 'r') as file:
-#         first_line = file.readline().strip().split(',')
-# use_columns = [i for i, flag in enumerate(first_line) if flag == '1']
-# data0 = pd.read_csv(filename, skiprows=1, usecols=use_columns)
-# data = normalize_dataframe(data0)
-#df = df.rename(columns={'1':'sepalLength','1.1':'sepalWidth','1.2':'petalLength','1.3':'petalWidth','0':'species'})
+# filename = '/Users/anaghasikha/Desktop/CSC_466/lab4_2/CSCLab4/4clusters.csv'
 
-# for i in range(data.shape[0]):
-#     neighbors = find_neighbors(data, data.iloc[i], epsilon=3)
-#     print(neighbors)
-main(filename, epsilon=0.1, min_pts = 2)
-#print(compute_distance_matrix(data))
+# main(filename, epsilon=0.14, min_pts = 4)
 
 
 if __name__ == "__main__":
     import sys
 
-    # if len(sys.argv) != 4:
-    #     print("Too many inputs!")
-    #     sys.exit(1)
+    if len(sys.argv) != 4:
+        print("Too many inputs!")
+        sys.exit(1)
 
-    # filename = sys.argv[1]
-    # epsilon = float(sys.argv[2])
-    # num_points = int(sys.argv[3])
+    filename = sys.argv[1]
+    epsilon = float(sys.argv[2])
+    min_pts = int(sys.argv[3])
 
-    # main(filename, epsilon=3,min_pts=3)
+    main(filename, epsilon, min_pts)
 
-    # filename = '/Users/anaghasikha/Desktop/CSC_466/CSCLab4/iris.csv'
-    # data = pd.read_csv(filename)
-    # data_numeric = data.select_dtypes(include=[np.number]).to_numpy()
-    # epsilon = 2.0
-    # min_samples = 2
-    # core_points = find_core_points(data, epsilon, min_samples)
-    # print("Core Points:", core_points)
-
+#eps - big enough to get enough points in each cluster but not too many
+#minpts - increase is more clusters, decrease is less clusters
+# want a high percentage of core points and lower percentage of border points for tightly defined clusters
